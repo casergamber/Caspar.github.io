@@ -471,31 +471,31 @@ const MUSCLE_COLORS={'Brust':'#e8ff47','Schultern':'#e8ff47','Trizeps':'#ff6b35'
 const ALL_MUSCLES=['Brust','Schultern','Trizeps','Rücken','Bizeps','Beine','Bauch','Waden'];
 const DEFAULT_DAYS={
   push:{name:'Push',exercises:[
-    {name:'Brustpresse',unit:'kg',muscles:['Brust','Schultern','Trizeps'],pauseMins:3},
-    {name:'Butterfly',unit:'kg',muscles:['Brust'],pauseMins:3},
-    {name:'Brustpresse (positiv)',unit:'kg',muscles:['Brust','Schultern'],pauseMins:3},
-    {name:'Schulterpresse',unit:'kg',muscles:['Schultern','Trizeps'],pauseMins:3},
-    {name:'Seitheben am Kabelzug',unit:'kg',muscles:['Schultern'],pauseMins:3},
-    {name:'Trizepsdrücken Kabelzug',unit:'kg',muscles:['Trizeps'],pauseMins:3},
-    {name:'Dips (Maschine)',unit:'kg',muscles:['Trizeps','Brust'],pauseMins:3}
+    {name:'Brustpresse',unit:'kg',muscles:['Brust','Schultern','Trizeps'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Butterfly',unit:'kg',muscles:['Brust'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Brustpresse (positiv)',unit:'kg',muscles:['Brust','Schultern'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Schulterpresse',unit:'kg',muscles:['Schultern','Trizeps'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Seitheben am Kabelzug',unit:'kg',muscles:['Schultern'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Trizepsdrücken am Kabelzug (gerade Stange)',unit:'kg',muscles:['Trizeps'],pauseMins:3,setsDefault:3,repsHint:'12'},
+    {name:'Dips (Maschine)',unit:'kg',muscles:['Trizeps','Brust'],pauseMins:3,setsDefault:3,repsHint:'Max'}
   ]},
   pull:{name:'Pull',exercises:[
-    {name:'Rudermaschine',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3},
-    {name:'Klimmzüge (Maschine)',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3},
-    {name:'Latzug (enger Griff)',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3},
-    {name:'Butterfly reverse',unit:'kg',muscles:['Rücken','Schultern'],pauseMins:3},
-    {name:'Hammer-Curls Kabelzug',unit:'kg',muscles:['Bizeps'],pauseMins:3},
-    {name:'Bizeps-Curls Kurzhanteln',unit:'kg',muscles:['Bizeps'],pauseMins:3},
-    {name:'Sit-Ups',unit:'',muscles:['Bauch'],pauseMins:2}
+    {name:'Rudermaschine',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Klimmzüge (Maschine)',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Latzug (enger Griff)',unit:'kg',muscles:['Rücken','Bizeps'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Butterfly reverse',unit:'kg',muscles:['Rücken','Schultern'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Hammer-Curls am Kabelzug (Seil)',unit:'kg',muscles:['Bizeps'],pauseMins:3,setsDefault:3,repsHint:'15-20'},
+    {name:'Bizeps-Curls (Kurzhanteln)',unit:'kg',muscles:['Bizeps'],pauseMins:3,setsDefault:3,repsHint:'15-20'},
+    {name:'Sit-Ups',unit:'',muscles:['Bauch'],pauseMins:2,setsDefault:3,repsHint:'10-15'}
   ]},
   beine:{name:'Beine',exercises:[
-    {name:'Beinstrecker',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Beinpresse',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Beinbeuger',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Ausfallschritte',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Adduktoren (Maschine)',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Abduktoren (Maschine)',unit:'kg',muscles:['Beine'],pauseMins:3},
-    {name:'Wadenheben (stehend)',unit:'kg',muscles:['Waden'],pauseMins:2}
+    {name:'Beinstrecker',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'15-20'},
+    {name:'Beinpresse',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'10-15'},
+    {name:'Beinbeuger',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'10-15'},
+    {name:'Ausfallschritte',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'10-14'},
+    {name:'Adduktoren (Maschine)',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Abduktoren (Maschine)',unit:'kg',muscles:['Beine'],pauseMins:3,setsDefault:3,repsHint:'8-12'},
+    {name:'Wadenheben (stehend)',unit:'kg',muscles:['Waden'],pauseMins:2,setsDefault:3,repsHint:'15-20'}
   ]}
 };
 function safeLoad(key, fallback){
@@ -508,6 +508,15 @@ function loadDays(){
   return d?d:JSON.parse(JSON.stringify(DEFAULT_DAYS));
 }
 function saveDays(){localStorage.setItem('gym_days',JSON.stringify(DAYS));}
+// ── LOCALSTORAGE VERSION CHECK ────────────────────────────────────
+const LS_VERSION='3';
+if(localStorage.getItem('gym_version')!==LS_VERSION){
+  // Migrate: keep history and gym days, clear potentially stale state
+  // Clear gym_days on version bump so new exercise defaults load cleanly
+  localStorage.removeItem('gym_days');
+  console.log('Gym app updated to v3 — exercise list refreshed');
+  localStorage.setItem('gym_version',LS_VERSION);
+}
 let DAYS=loadDays();
 let currentDay='push',manageDay2='push';
 let state={},openCards={},charts={},notesOpen={};
@@ -631,7 +640,7 @@ function loadLastWeights(day){
 }
 function initState(day){
   if(state[day])return;
-  state[day]=DAYS[day].exercises.map(ex=>({sets:Array.from({length:3},()=>({weight:20,reps:10,done:false})),note:''}));
+  state[day]=DAYS[day].exercises.map(ex=>({sets:Array.from({length:ex.setsDefault||3},()=>({weight:20,reps:ex.repsDefault||10,done:false})),note:''}));
   loadLastWeights(day);
 }
 function switchDay(day){
@@ -675,7 +684,7 @@ function render(){
         <div style="display:flex;align-items:center;gap:6px">
           <span class="pr-badge" id="pr-${key}">PR</span>
           ${ai?`<span class="ai-badge" id="ai-${key}">KI: ${ai}kg</span>`:`<span id="ai-${key}"></span>`}
-          <span class="ex-pill${done===total?' done':''}" id="pill-${key}">${done}/${total} Sätze</span>
+          <span class="ex-pill${done===total?' done':''}" id="pill-${key}">${done}/${total} · ${ex.setsDefault||3}×${ex.repsHint||'8-12'}</span>
         </div>
         <svg id="chev-${key}" class="chevron${openCards[key]?' open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
@@ -699,7 +708,8 @@ function renderBody(day,ei){
   const cardEl=document.getElementById('card-'+key);
   if(cardEl)cardEl.classList.toggle('completed',done===total&&total>0);
   const pillEl=document.getElementById('pill-'+key);
-  if(pillEl){pillEl.textContent=done+'/'+total+' Sätze';pillEl.className='ex-pill'+(done===total?' done':'');}
+  const rh=DAYS[day].exercises[ei].repsHint||'8-12';const sd=DAYS[day].exercises[ei].setsDefault||3;
+  if(pillEl){pillEl.textContent=done+'/'+total+' · '+sd+'×'+rh;pillEl.className='ex-pill'+(done===total?' done':'');}
   const bodyEl=document.getElementById('body-'+key);if(!bodyEl)return;
   const ai=getAI(DAYS[day].name,ex.name);
   const pauseMins=ex.pauseMins||3;
@@ -797,7 +807,8 @@ function toggleSet(day,ei,si){
   const sets=state[day][ei].sets;
   const done=sets.filter(x=>x.done).length,total=sets.length;
   const pillEl=document.getElementById('pill-'+key);
-  if(pillEl){pillEl.textContent=done+'/'+total+' Sätze';pillEl.className='ex-pill'+(done===total?' done':'');}
+  const rh=DAYS[day].exercises[ei].repsHint||'8-12';const sd=DAYS[day].exercises[ei].setsDefault||3;
+  if(pillEl){pillEl.textContent=done+'/'+total+' · '+sd+'×'+rh;pillEl.className='ex-pill'+(done===total?' done':'');}
   document.getElementById('card-'+key)?.classList.toggle('completed',done===total&&total>0);
   const anyDone=state[day].some(ex=>ex.sets.some(s=>s.done));
   if(s.done&&anyDone&&!wtRunning)toggleWT();
@@ -1147,16 +1158,7 @@ function exportCSV(){
 // ── TOAST ─────────────────────────────────────────────────────────
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
 
-// ── LOCALSTORAGE VERSION CHECK ────────────────────────────────────
-const LS_VERSION='2';
-if(localStorage.getItem('gym_version')!==LS_VERSION){
-  // Migrate: keep history and gym days, clear potentially stale state
-  ['gym_days'].forEach(k=>{
-    const v=localStorage.getItem(k);
-    if(v){try{JSON.parse(v);}catch(e){console.warn('Removing corrupted key:',k);localStorage.removeItem(k);}}
-  });
-  localStorage.setItem('gym_version',LS_VERSION);
-}
+
 
 // ── INIT ──────────────────────────────────────────────────────────
 const savedTheme=localStorage.getItem('gym_theme')||'dark';
