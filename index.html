@@ -28,41 +28,40 @@
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
-// ── CONFIG ───────────────────────────────────────────────────────────────────
 const CLIENT_ID = "590402496982-vurj26vm01c40c8oaqrklb2u5dtkpald.apps.googleusercontent.com";
-const SCOPES = "https://www.googleapis.com/auth/drive.appdata";
-const DRIVE_FILE_NAME = "fittrack_data.json";
+const SCOPES    = "https://www.googleapis.com/auth/drive.appdata";
+const FILE_NAME = "fittrack_data.json";
 
 // ── TRAINING PLAN ─────────────────────────────────────────────────────────────
 const PLAN = [
   {
     id: "push", label: "Tag 1", title: "Oberkörper Push", color: "#FF6B35",
     exercises: [
-      { id: "bench",    name: "Bankdrücken",              sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
-      { id: "shoulder", name: "Schulterdrücken",           sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
-      { id: "incline",  name: "Schrägbankdrücken",         sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
-      { id: "triceps",  name: "Trizepsdrücken",            sets: 2, reps: "10–12",     rest: 60,  unit: "kg" },
-      { id: "plank",    name: "Unterarmstütz (Plank)",     sets: 3, reps: "30s halten",rest: 60,  unit: "s"  },
+      { id: "bench",    name: "Bankdrücken",               sets: 3, reps: "8–10",       rest: 90,  unit: "kg" },
+      { id: "shoulder", name: "Schulterdrücken",            sets: 3, reps: "8–10",       rest: 90,  unit: "kg" },
+      { id: "incline",  name: "Schrägbankdrücken",          sets: 3, reps: "8–10",       rest: 90,  unit: "kg" },
+      { id: "triceps",  name: "Trizepsdrücken",             sets: 2, reps: "10–12",      rest: 60,  unit: "kg" },
+      { id: "plank",    name: "Unterarmstütz (Plank)",      sets: 3, reps: "30s halten", rest: 60,  unit: "s"  },
     ],
   },
   {
     id: "legs1", label: "Tag 2", title: "Unterkörper", color: "#4ECDC4",
     exercises: [
-      { id: "squat",    name: "Kniebeuge",                        sets: 3, reps: "8–10",  rest: 90,  unit: "kg" },
-      { id: "deadlift", name: "Kreuzheben / Rum. Kreuzheben",     sets: 3, reps: "6–8",   rest: 120, unit: "kg" },
-      { id: "legpress", name: "Beinpresse",                       sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
-      { id: "legcurl1", name: "Beinbeuger (Maschine)",            sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
-      { id: "calf1",    name: "Wadenheben",                       sets: 3, reps: "12–15", rest: 60,  unit: "kg" },
+      { id: "squat",    name: "Kniebeuge",                       sets: 3, reps: "8–10",  rest: 90,  unit: "kg" },
+      { id: "deadlift", name: "Kreuzheben / Rum. Kreuzheben",    sets: 3, reps: "6–8",   rest: 120, unit: "kg" },
+      { id: "legpress", name: "Beinpresse",                      sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
+      { id: "legcurl1", name: "Beinbeuger (Maschine)",           sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
+      { id: "calf1",    name: "Wadenheben",                      sets: 3, reps: "12–15", rest: 60,  unit: "kg" },
     ],
   },
   {
     id: "pull", label: "Tag 3", title: "Oberkörper Pull", color: "#A78BFA",
     exercises: [
-      { id: "pullup",  name: "Klimmzüge / Latzug (weit)",         sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
-      { id: "row",     name: "Vorgebeugtes Rudern",                sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
-      { id: "latpull", name: "Latziehen (enger Griff)",            sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
-      { id: "bicep",   name: "Bizepscurls",                        sets: 2, reps: "10–12", rest: 60, unit: "kg"   },
-      { id: "crunch",  name: "Crunches",                           sets: 3, reps: "12–15", rest: 60, unit: "Wdh." },
+      { id: "pullup",  name: "Klimmzüge / Latzug (weit)",        sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "row",     name: "Vorgebeugtes Rudern",               sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "latpull", name: "Latziehen (enger Griff)",           sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "bicep",   name: "Bizepscurls",                       sets: 2, reps: "10–12", rest: 60, unit: "kg"   },
+      { id: "crunch",  name: "Crunches",                          sets: 3, reps: "12–15", rest: 60, unit: "Wdh." },
     ],
   },
   {
@@ -77,92 +76,116 @@ const PLAN = [
   },
 ];
 
-// ── LOCAL STORAGE FALLBACK ────────────────────────────────────────────────────
-const LS_KEY = "fitness_v2";
+// ── LOCAL STORAGE ─────────────────────────────────────────────────────────────
+const LS_KEY = "fitness_v3";
 function lsLoad() {
-  try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : { logs: {} }; } catch { return { logs: {} }; }
+  try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : { logs: {} }; }
+  catch { return { logs: {} }; }
 }
 function lsSave(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch {} }
 
-// ── GOOGLE DRIVE API ──────────────────────────────────────────────────────────
-let _token = null;
+// ── FIX 1: Local timezone date key (not UTC) ──────────────────────────────────
+function todayKey() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const dd   = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
-function getToken() { return _token; }
+// ── GOOGLE DRIVE ──────────────────────────────────────────────────────────────
+let _token      = null;
+let _tokenExp   = 0;       // FIX 3: track expiry
+let _cachedFileId = null;  // FIX 4: cache file ID to avoid double lookup
+
+function tokenValid() { return _token && Date.now() < _tokenExp - 60_000; }
+
+// FIX 2: wait for GSI script to load before calling
+function waitForGoogle(timeout = 10000) {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.oauth2) return resolve();
+    const start = Date.now();
+    const check = setInterval(() => {
+      if (window.google?.accounts?.oauth2) { clearInterval(check); resolve(); }
+      else if (Date.now() - start > timeout) { clearInterval(check); reject(new Error("Google-Bibliothek nicht geladen")); }
+    }, 100);
+  });
+}
 
 async function signIn() {
+  await waitForGoogle();  // FIX 2
   return new Promise((resolve, reject) => {
     const client = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
       callback: (resp) => {
-        if (resp.error) return reject(resp.error);
-        _token = resp.access_token;
-        resolve(resp.access_token);
+        if (resp.error) return reject(new Error(resp.error));
+        _token    = resp.access_token;
+        _tokenExp = Date.now() + (resp.expires_in ?? 3600) * 1000;  // FIX 3
+        _cachedFileId = null; // reset cache on new token
+        resolve();
       },
     });
     client.requestAccessToken();
   });
 }
 
-async function driveRequest(url, options = {}) {
-  const token = getToken();
-  if (!token) throw new Error("Nicht angemeldet");
-  const res = await fetch(url, {
-    ...options,
-    headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
-  });
-  if (!res.ok) throw new Error(`Drive API Fehler: ${res.status}`);
+// FIX 3: re-authenticate if token expired
+async function ensureToken() {
+  if (!tokenValid()) await signIn();
+}
+
+async function driveGet(url) {
+  await ensureToken();
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${_token}` } });
+  if (!res.ok) throw new Error(`Drive ${res.status}`);
   return res.status === 204 ? null : res.json();
 }
 
-async function findFile() {
-  const data = await driveRequest(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name)`
+// FIX 4: cache file ID so we only look it up once
+async function getFileId() {
+  if (_cachedFileId) return _cachedFileId;
+  const data = await driveGet(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id)`
   );
-  return data.files?.[0] || null;
+  _cachedFileId = data.files?.[0]?.id ?? null;
+  return _cachedFileId;
 }
 
 async function loadFromDrive() {
-  const file = await findFile();
-  if (!file) return null;
-  const token = getToken();
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  await ensureToken();
+  const id = await getFileId();
+  if (!id) return null;
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`,
+    { headers: { Authorization: `Bearer ${_token}` } });
   if (!res.ok) return null;
   return res.json();
 }
 
-async function saveToDrive(data) {
-  const json = JSON.stringify(data);
-  const blob = new Blob([json], { type: "application/json" });
-  const existing = await findFile();
+async function saveToDrive(payload) {
+  await ensureToken();
+  const json = JSON.stringify(payload);
+  const id   = await getFileId(); // FIX 4: only 1 lookup per save
 
-  if (existing) {
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
-      body: json,
-    });
+  if (id) {
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+      { method: "PATCH", headers: { Authorization: `Bearer ${_token}`, "Content-Type": "application/json" }, body: json }
+    );
+    if (!res.ok) throw new Error(`Save failed ${res.status}`);
   } else {
-    const meta = JSON.stringify({ name: DRIVE_FILE_NAME, parents: ["appDataFolder"] });
+    const meta = JSON.stringify({ name: FILE_NAME, parents: ["appDataFolder"] });
     const form = new FormData();
     form.append("metadata", new Blob([meta], { type: "application/json" }));
-    form.append("file", blob);
-    await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${getToken()}` },
-      body: form,
-    });
+    form.append("file",     new Blob([json], { type: "application/json" }));
+    const res = await fetch(
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
+      { method: "POST", headers: { Authorization: `Bearer ${_token}` }, body: form }
+    );
+    if (!res.ok) throw new Error(`Create failed ${res.status}`);
+    const created = await res.json();
+    _cachedFileId = created.id; // cache new ID
   }
-}
-
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-function todayKey() { return new Date().toISOString().slice(0, 10); }
-function fmtTime(s) {
-  const m = Math.floor(s / 60), sec = s % 60;
-  return m > 0 ? `${m}:${sec.toString().padStart(2, "0")}` : `${sec}s`;
 }
 
 // ── TIMER HOOK ────────────────────────────────────────────────────────────────
@@ -170,7 +193,7 @@ function useTimer(onFinish) {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const endRef = useRef(null);
-  const cbRef = useRef(onFinish);
+  const cbRef  = useRef(onFinish);
   cbRef.current = onFinish;
   useEffect(() => {
     if (!running) return;
@@ -182,9 +205,14 @@ function useTimer(onFinish) {
     return () => clearInterval(iv);
   }, [running]);
   const start = useCallback((dur) => { endRef.current = Date.now() + dur * 1000; setSeconds(dur); setRunning(true); }, []);
-  const stop = useCallback(() => setRunning(false), []);
+  const stop  = useCallback(() => setRunning(false), []);
   const reset = useCallback(() => { setRunning(false); setSeconds(0); }, []);
   return { seconds, running, start, stop, reset };
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return m > 0 ? `${m}:${sec.toString().padStart(2, "0")}` : `${sec}s`;
 }
 
 function reqNotif() {
@@ -198,118 +226,123 @@ function sendNotif(title, body) {
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 function App() {
-  const [data, setData] = useState(() => lsLoad());
-  const [view, setView] = useState("home");
-  const [activeDay, setActiveDay] = useState(null);
-  const [toast, setToast] = useState(null);
-  const [syncStatus, setSyncStatus] = useState("offline"); // offline | syncing | synced | error
+  const [data,       setData]       = useState(() => lsLoad());
+  const [view,       setView]       = useState("home");
+  const [activeDay,  setActiveDay]  = useState(null);
+  const [toast,      setToast]      = useState(null);
+  const [syncStatus, setSyncStatus] = useState("offline");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const saveTimerRef = useRef(null);
+  const saveTimer = useRef(null);
+  const skipNextSave = useRef(false); // prevent saving right after loading from Drive
 
   const timer = useTimer(() => {
-    sendNotif("Pause beendet!", "Naechster Satz – Los geht's!");
+    sendNotif("Pause beendet!", "Nächster Satz – Los geht's!");
     showToast("Pause beendet! Weiter geht's!");
   });
 
   useEffect(() => { reqNotif(); }, []);
 
-  // Save locally always, Drive debounced
+  // Always save locally; debounce Drive save
   useEffect(() => {
     lsSave(data);
     if (!isLoggedIn) return;
-    clearTimeout(saveTimerRef.current);
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
+    clearTimeout(saveTimer.current);
     setSyncStatus("syncing");
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await saveToDrive(data);
-        setSyncStatus("synced");
-      } catch {
-        setSyncStatus("error");
-      }
+    saveTimer.current = setTimeout(async () => {
+      try   { await saveToDrive(data); setSyncStatus("synced"); }
+      catch { setSyncStatus("error"); }
     }, 1500);
-  }, [data, isLoggedIn]);
+  }, [data]); // deliberately exclude isLoggedIn to avoid double-save on login
 
-  function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2500); }
+  function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2800); }
 
   async function handleLogin() {
     try {
       setSyncStatus("syncing");
       await signIn();
       setIsLoggedIn(true);
-      showToast("Angemeldet! Lade Daten...");
+      showToast("Verbunden – lade Daten...");
       const remote = await loadFromDrive();
-      if (remote && remote.logs) {
-        // Merge: prefer remote for older dates, local for today
+      if (remote?.logs) {
         const merged = { logs: { ...remote.logs } };
-        const todayPrefix = todayKey();
+        const today  = todayKey();
+        // Keep today's local data, use remote for everything else
         Object.entries(data.logs).forEach(([k, v]) => {
-          if (k.startsWith(todayPrefix)) merged.logs[k] = v;
+          if (k.startsWith(today)) merged.logs[k] = v;
         });
+        skipNextSave.current = true; // don't immediately re-upload what we just downloaded
         setData(merged);
         lsSave(merged);
         showToast("Daten aus Google Drive geladen!");
       } else {
-        showToast("Kein Verlauf in Drive gefunden – starte neu.");
+        showToast("Kein Drive-Verlauf – lokale Daten bleiben.");
+        // Upload local data as first sync
+        await saveToDrive(data);
       }
       setSyncStatus("synced");
     } catch (e) {
       setSyncStatus("error");
-      showToast("Anmeldung fehlgeschlagen.");
+      showToast("Anmeldung fehlgeschlagen: " + (e.message || ""));
     }
   }
 
+  // ── Data helpers ───────────────────────────────────────────────────────────
   function getLog(dayId, exId) {
     return data.logs[`${todayKey()}_${dayId}`]?.[exId] ?? {};
   }
 
-  function setSetValue(dayId, exId, setIdx, field, value) {
-    const key = `${todayKey()}_${dayId}`;
+  function mutateLog(updater) {
     setData(prev => {
       const logs = JSON.parse(JSON.stringify(prev.logs));
-      if (!logs[key]) logs[key] = {};
-      if (!logs[key][exId]) logs[key][exId] = {};
-      if (!logs[key][exId][setIdx]) logs[key][exId][setIdx] = {};
-      logs[key][exId][setIdx][field] = value;
+      updater(logs);
       return { ...prev, logs };
     });
   }
 
-  function markSetDone(dayId, exId, setIdx, rest) {
-    setSetValue(dayId, exId, setIdx, "done", true);
+  function setSetValue(dayId, exId, si, field, value) {
+    const key = `${todayKey()}_${dayId}`;
+    mutateLog(logs => {
+      if (!logs[key])          logs[key]          = {};
+      if (!logs[key][exId])    logs[key][exId]    = {};
+      if (!logs[key][exId][si])logs[key][exId][si]= {};
+      logs[key][exId][si][field] = value;
+    });
+  }
+
+  function markSetDone(dayId, exId, si, rest) {
+    setSetValue(dayId, exId, si, "done", true);
     timer.start(rest);
     showToast(`Pause: ${fmtTime(rest)}`);
   }
 
-  function histSetValue(sessionKey, exId, setIdx, field, value) {
-    setData(prev => {
-      const logs = JSON.parse(JSON.stringify(prev.logs));
-      if (!logs[sessionKey]) logs[sessionKey] = {};
-      if (!logs[sessionKey][exId]) logs[sessionKey][exId] = {};
-      if (!logs[sessionKey][exId][setIdx]) logs[sessionKey][exId][setIdx] = {};
-      logs[sessionKey][exId][setIdx][field] = value;
-      return { ...prev, logs };
+  function histSetValue(sk, exId, si, field, value) {
+    mutateLog(logs => {
+      if (!logs[sk])          logs[sk]          = {};
+      if (!logs[sk][exId])    logs[sk][exId]    = {};
+      if (!logs[sk][exId][si])logs[sk][exId][si]= {};
+      logs[sk][exId][si][field] = value;
     });
   }
 
-  function histDeleteSet(sessionKey, exId, setIdx) {
-    setData(prev => {
-      const logs = JSON.parse(JSON.stringify(prev.logs));
-      if (logs[sessionKey]?.[exId]?.[setIdx] !== undefined) {
-        delete logs[sessionKey][exId][setIdx];
-        if (!Object.keys(logs[sessionKey][exId]).length) delete logs[sessionKey][exId];
-        if (!Object.keys(logs[sessionKey]).length) delete logs[sessionKey];
-      }
-      return { ...prev, logs };
+  function histDeleteSet(sk, exId, si) {
+    mutateLog(logs => {
+      if (logs[sk]?.[exId]?.[si] === undefined) return;
+      delete logs[sk][exId][si];
+      if (!Object.keys(logs[sk][exId]).length) delete logs[sk][exId];
+      if (!Object.keys(logs[sk]).length)       delete logs[sk];
     });
   }
 
+  // FIX 5: use `!= null` instead of `filter(Boolean)` so 0 kg is valid
   function getLastWeight(dayId, exId) {
     const keys = Object.keys(data.logs)
       .filter(k => k.endsWith(`_${dayId}`) && !k.startsWith(todayKey()))
       .sort().reverse();
     for (const k of keys) {
       const weights = Object.values(data.logs[k]?.[exId] ?? {})
-        .map(s => parseFloat(s.weight)).filter(Boolean);
+        .map(s => parseFloat(s.weight))
+        .filter(w => !isNaN(w)); // FIX 5: keep 0, only drop NaN
       if (weights.length) return Math.max(...weights);
     }
     return null;
@@ -323,44 +356,32 @@ function App() {
     return { done, total };
   }
 
-  const sharedProps = { getLog, setSetValue, markSetDone, getLastWeight, timer, histSetValue, histDeleteSet };
-
   if (view === "workout" && activeDay) return (
-    <WorkoutView day={activeDay} {...sharedProps}
+    <WorkoutView day={activeDay} getLog={getLog} setSetValue={setSetValue}
+      markSetDone={markSetDone} getLastWeight={getLastWeight} timer={timer}
       onBack={() => { setView("home"); timer.reset(); }} toast={toast} />
   );
   if (view === "history") return (
     <HistoryView data={data} onBack={() => setView("home")}
       histSetValue={histSetValue} histDeleteSet={histDeleteSet} />
   );
-
   return (
     <HomeView plan={PLAN} dayProgress={dayProgress}
-      onStart={(day) => { setActiveDay(day); setView("workout"); }}
+      onStart={day => { setActiveDay(day); setView("workout"); }}
       onHistory={() => setView("history")}
-      toast={toast}
-      syncStatus={syncStatus}
-      isLoggedIn={isLoggedIn}
-      onLogin={handleLogin}
-    />
+      toast={toast} syncStatus={syncStatus} isLoggedIn={isLoggedIn} onLogin={handleLogin} />
   );
 }
 
 // ── SYNC BADGE ────────────────────────────────────────────────────────────────
 function SyncBadge({ status, isLoggedIn, onLogin }) {
   if (!isLoggedIn) return (
-    <button style={S.loginBtn} onClick={onLogin}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 5 }}>
-        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/>
-        <path d="M15 9H9m0 0l3-3m-3 3l3 3"/>
-      </svg>
-      Drive-Sync
-    </button>
+    <button style={S.loginBtn} onClick={onLogin}>Drive-Sync</button>
   );
   const map = {
-    syncing: { color: "#F59E0B", label: "Speichern..." },
+    syncing: { color: "#F59E0B", label: "Speichern…" },
     synced:  { color: "#22c55e", label: "Gespeichert" },
-    error:   { color: "#ef4444", label: "Sync-Fehler" },
+    error:   { color: "#ef4444", label: "Fehler" },
     offline: { color: "#555",    label: "Offline" },
   };
   const s = map[status] || map.offline;
@@ -425,7 +446,6 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
         <div style={{ ...S.logo, color: day.color }}>{day.title}</div>
         <div />
       </header>
-
       {timer.running && (
         <div style={{ position: "sticky", top: 57, zIndex: 99, background: "#0F0820", borderBottom: "2px solid #A78BFA", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "10px 20px" }}>
           <span style={{ fontSize: 12, color: "#A78BFA", textTransform: "uppercase", letterSpacing: 1 }}>Pause</span>
@@ -433,10 +453,9 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
           <button style={{ background: "transparent", border: "1px solid #A78BFA", color: "#A78BFA", borderRadius: 8, padding: "4px 12px", cursor: "pointer", fontSize: 12 }} onClick={timer.stop}>Überspringen</button>
         </div>
       )}
-
       <div style={S.scroll}>
         {day.exercises.map((ex, ei) => {
-          const log = getLog(day.id, ex.id);
+          const log   = getLog(day.id, ex.id);
           const lastW = getLastWeight(day.id, ex.id);
           const allDone = Array.from({ length: ex.sets }, (_, i) => log[i]?.done).every(Boolean);
           return (
@@ -456,7 +475,7 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
                 </div>
                 {Array.from({ length: ex.sets }, (_, si) => {
                   const setLog = log[si] ?? {};
-                  const done = setLog.done ?? false;
+                  const done   = setLog.done ?? false;
                   return (
                     <div key={si} style={{ display: "grid", gridTemplateColumns: "30px 1fr 1fr 44px", gap: 8, alignItems: "center", padding: 4, borderRadius: 8, background: done ? "rgba(255,255,255,0.04)" : "transparent" }}>
                       <span style={{ fontSize: 16, fontWeight: 900, textAlign: "center", color: day.color }}>{si + 1}</span>
@@ -481,7 +500,7 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
-  const dayMap = Object.fromEntries(PLAN.map(d => [d.id, d]));
+  const dayMap  = Object.fromEntries(PLAN.map(d => [d.id, d]));
   const [editing, setEditing] = useState({});
 
   const sessions = Object.entries(data.logs)
@@ -523,7 +542,7 @@ function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
               <div style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: s.day.color }}>{s.done}/{s.total} Sätze</div>
             </div>
             {s.day.exercises.map(ex => {
-              const exLog = s.log[ex.id] ?? {};
+              const exLog   = s.log[ex.id] ?? {};
               const allSets = Object.entries(exLog);
               if (!allSets.length) return null;
               const editMode = isEdit(s.key, ex.id);
@@ -540,7 +559,7 @@ function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {allSets.map(([si, v]) => (
                         <span key={si} style={{ background: "#1A1A2E", borderRadius: 6, padding: "3px 8px", fontSize: 12, color: "#bbb", opacity: v.done ? 1 : 0.4 }}>
-                          {v.weight ? `${v.weight}${ex.unit}` : "–"}{v.weight && v.reps ? " × " : ""}{v.reps || ""}
+                          {v.weight !== "" && v.weight != null ? `${v.weight}${ex.unit}` : "–"}{v.weight != null && v.weight !== "" && v.reps ? " × " : ""}{v.reps || ""}
                         </span>
                       ))}
                     </div>
@@ -582,20 +601,20 @@ function Toast({ msg }) {
 }
 
 const S = {
-  app: { minHeight: "100vh", background: "#0A0A0F", color: "#E8E8F0", fontFamily: "'Barlow', sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "#0D0D14", borderBottom: "1px solid #1E1E2E", position: "sticky", top: 0, zIndex: 100, gap: 10 },
-  logo: { fontSize: 20, fontWeight: 800, letterSpacing: 1, color: "#FF6B35" },
-  histBtn: { background: "transparent", border: "1px solid #333", color: "#aaa", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, flexShrink: 0 },
-  loginBtn: { display: "flex", alignItems: "center", background: "transparent", border: "1px solid #4285F4", color: "#4285F4", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 },
-  backBtn: { background: "transparent", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16, padding: 0 },
-  h1: { fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: 0.5 },
-  dayGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "16px 20px" },
-  dayCard: { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 18, padding: "20px 16px", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, transition: "transform 0.15s", position: "relative", overflow: "hidden" },
-  scroll: { flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 14 },
-  card: { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 16, padding: 16 },
-  input: { background: "#0A0A0F", border: "1px solid #252535", borderRadius: 8, color: "#E8E8F0", fontSize: 16, fontWeight: 700, padding: "6px 8px", width: "100%", textAlign: "center", outline: "none", boxSizing: "border-box" },
-  inputSm: { background: "#0A0A0F", border: "1px solid #252535", borderRadius: 6, color: "#E8E8F0", fontSize: 13, fontWeight: 700, padding: "5px 4px", width: "100%", textAlign: "center", outline: "none", boxSizing: "border-box" },
-  doneBtn: { border: "none", borderRadius: 8, color: "#000", fontSize: 16, fontWeight: 900, cursor: "pointer", padding: "6px 0", width: 44, transition: "background 0.2s" },
+  app:      { minHeight: "100vh", background: "#0A0A0F", color: "#E8E8F0", fontFamily: "'Barlow', sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" },
+  header:   { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "#0D0D14", borderBottom: "1px solid #1E1E2E", position: "sticky", top: 0, zIndex: 100, gap: 10 },
+  logo:     { fontSize: 20, fontWeight: 800, letterSpacing: 1, color: "#FF6B35" },
+  histBtn:  { background: "transparent", border: "1px solid #333", color: "#aaa", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, flexShrink: 0 },
+  loginBtn: { background: "transparent", border: "1px solid #4285F4", color: "#4285F4", borderRadius: 8, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 },
+  backBtn:  { background: "transparent", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16, padding: 0 },
+  h1:       { fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: 0.5 },
+  dayGrid:  { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "16px 20px" },
+  dayCard:  { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 18, padding: "20px 16px", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, transition: "transform 0.15s", position: "relative", overflow: "hidden" },
+  scroll:   { flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 14 },
+  card:     { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 16, padding: 16 },
+  input:    { background: "#0A0A0F", border: "1px solid #252535", borderRadius: 8,  color: "#E8E8F0", fontSize: 16, fontWeight: 700, padding: "6px 8px", width: "100%", textAlign: "center", outline: "none", boxSizing: "border-box" },
+  inputSm:  { background: "#0A0A0F", border: "1px solid #252535", borderRadius: 6,  color: "#E8E8F0", fontSize: 13, fontWeight: 700, padding: "5px 4px", width: "100%", textAlign: "center", outline: "none", boxSizing: "border-box" },
+  doneBtn:  { border: "none", borderRadius: 8, color: "#000", fontSize: 16, fontWeight: 900, cursor: "pointer", padding: "6px 0", width: 44, transition: "background 0.2s" },
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
