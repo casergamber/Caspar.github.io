@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0A0A0F; font-family: 'Barlow', sans-serif; }
@@ -19,6 +20,7 @@
     from { opacity: 0; transform: translateX(-50%) translateY(12px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -26,35 +28,41 @@
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
+// ── CONFIG ───────────────────────────────────────────────────────────────────
+const CLIENT_ID = "590402496982-vurj26vm01c40c8oaqrklb2u5dtkpald.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/drive.appdata";
+const DRIVE_FILE_NAME = "fittrack_data.json";
+
+// ── TRAINING PLAN ─────────────────────────────────────────────────────────────
 const PLAN = [
   {
     id: "push", label: "Tag 1", title: "Oberkörper Push", color: "#FF6B35",
     exercises: [
-      { id: "bench",    name: "Bankdrücken",              sets: 3, reps: "8–10",    rest: 90,  unit: "kg" },
-      { id: "shoulder", name: "Schulterdrücken",           sets: 3, reps: "8–10",    rest: 90,  unit: "kg" },
-      { id: "incline",  name: "Schrägbankdrücken",         sets: 3, reps: "8–10",    rest: 90,  unit: "kg" },
-      { id: "triceps",  name: "Trizepsdrücken",            sets: 2, reps: "10–12",   rest: 60,  unit: "kg" },
-      { id: "plank",    name: "Unterarmstütz (Plank)",     sets: 3, reps: "30s halten", rest: 60, unit: "s" },
+      { id: "bench",    name: "Bankdrücken",              sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
+      { id: "shoulder", name: "Schulterdrücken",           sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
+      { id: "incline",  name: "Schrägbankdrücken",         sets: 3, reps: "8–10",      rest: 90,  unit: "kg" },
+      { id: "triceps",  name: "Trizepsdrücken",            sets: 2, reps: "10–12",     rest: 60,  unit: "kg" },
+      { id: "plank",    name: "Unterarmstütz (Plank)",     sets: 3, reps: "30s halten",rest: 60,  unit: "s"  },
     ],
   },
   {
     id: "legs1", label: "Tag 2", title: "Unterkörper", color: "#4ECDC4",
     exercises: [
-      { id: "squat",    name: "Kniebeuge",                         sets: 3, reps: "8–10",  rest: 90,  unit: "kg" },
-      { id: "deadlift", name: "Kreuzheben / Rum. Kreuzheben",      sets: 3, reps: "6–8",   rest: 120, unit: "kg" },
-      { id: "legpress", name: "Beinpresse",                        sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
-      { id: "legcurl1", name: "Beinbeuger (Maschine)",             sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
-      { id: "calf1",    name: "Wadenheben",                        sets: 3, reps: "12–15", rest: 60,  unit: "kg" },
+      { id: "squat",    name: "Kniebeuge",                        sets: 3, reps: "8–10",  rest: 90,  unit: "kg" },
+      { id: "deadlift", name: "Kreuzheben / Rum. Kreuzheben",     sets: 3, reps: "6–8",   rest: 120, unit: "kg" },
+      { id: "legpress", name: "Beinpresse",                       sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
+      { id: "legcurl1", name: "Beinbeuger (Maschine)",            sets: 3, reps: "10–12", rest: 90,  unit: "kg" },
+      { id: "calf1",    name: "Wadenheben",                       sets: 3, reps: "12–15", rest: 60,  unit: "kg" },
     ],
   },
   {
     id: "pull", label: "Tag 3", title: "Oberkörper Pull", color: "#A78BFA",
     exercises: [
-      { id: "pullup",  name: "Klimmzüge / Latzug (weit)",          sets: 3, reps: "8–10",  rest: 90, unit: "kg" },
-      { id: "row",     name: "Vorgebeugtes Rudern",                 sets: 3, reps: "8–10",  rest: 90, unit: "kg" },
-      { id: "latpull", name: "Latziehen (enger Griff)",             sets: 3, reps: "8–10",  rest: 90, unit: "kg" },
-      { id: "bicep",   name: "Bizepscurls",                         sets: 2, reps: "10–12", rest: 60, unit: "kg" },
-      { id: "crunch",  name: "Crunches",                            sets: 3, reps: "12–15", rest: 60, unit: "Wdh." },
+      { id: "pullup",  name: "Klimmzüge / Latzug (weit)",         sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "row",     name: "Vorgebeugtes Rudern",                sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "latpull", name: "Latziehen (enger Griff)",            sets: 3, reps: "8–10",  rest: 90, unit: "kg"   },
+      { id: "bicep",   name: "Bizepscurls",                        sets: 2, reps: "10–12", rest: 60, unit: "kg"   },
+      { id: "crunch",  name: "Crunches",                           sets: 3, reps: "12–15", rest: 60, unit: "Wdh." },
     ],
   },
   {
@@ -69,18 +77,95 @@ const PLAN = [
   },
 ];
 
-const STORAGE_KEY = "fitness_v2";
-function loadData() {
-  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : { logs: {} }; }
-  catch { return { logs: {} }; }
+// ── LOCAL STORAGE FALLBACK ────────────────────────────────────────────────────
+const LS_KEY = "fitness_v2";
+function lsLoad() {
+  try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : { logs: {} }; } catch { return { logs: {} }; }
 }
-function saveData(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {} }
+function lsSave(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch {} }
+
+// ── GOOGLE DRIVE API ──────────────────────────────────────────────────────────
+let _token = null;
+
+function getToken() { return _token; }
+
+async function signIn() {
+  return new Promise((resolve, reject) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (resp) => {
+        if (resp.error) return reject(resp.error);
+        _token = resp.access_token;
+        resolve(resp.access_token);
+      },
+    });
+    client.requestAccessToken();
+  });
+}
+
+async function driveRequest(url, options = {}) {
+  const token = getToken();
+  if (!token) throw new Error("Nicht angemeldet");
+  const res = await fetch(url, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+  });
+  if (!res.ok) throw new Error(`Drive API Fehler: ${res.status}`);
+  return res.status === 204 ? null : res.json();
+}
+
+async function findFile() {
+  const data = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name)`
+  );
+  return data.files?.[0] || null;
+}
+
+async function loadFromDrive() {
+  const file = await findFile();
+  if (!file) return null;
+  const token = getToken();
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function saveToDrive(data) {
+  const json = JSON.stringify(data);
+  const blob = new Blob([json], { type: "application/json" });
+  const existing = await findFile();
+
+  if (existing) {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+      body: json,
+    });
+  } else {
+    const meta = JSON.stringify({ name: DRIVE_FILE_NAME, parents: ["appDataFolder"] });
+    const form = new FormData();
+    form.append("metadata", new Blob([meta], { type: "application/json" }));
+    form.append("file", blob);
+    await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: form,
+    });
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function fmtTime(s) {
   const m = Math.floor(s / 60), sec = s % 60;
   return m > 0 ? `${m}:${sec.toString().padStart(2, "0")}` : `${sec}s`;
 }
 
+// ── TIMER HOOK ────────────────────────────────────────────────────────────────
 function useTimer(onFinish) {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
@@ -102,29 +187,76 @@ function useTimer(onFinish) {
   return { seconds, running, start, stop, reset };
 }
 
-function requestNotification() {
+function reqNotif() {
   if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
 }
-function sendNotification(title, body) {
+function sendNotif(title, body) {
   if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body });
 }
 
-// ── MAIN APP ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════════════════════════════════════
 function App() {
-  const [data, setData] = useState(loadData);
+  const [data, setData] = useState(() => lsLoad());
   const [view, setView] = useState("home");
   const [activeDay, setActiveDay] = useState(null);
   const [toast, setToast] = useState(null);
+  const [syncStatus, setSyncStatus] = useState("offline"); // offline | syncing | synced | error
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const saveTimerRef = useRef(null);
 
   const timer = useTimer(() => {
-    sendNotification("Pause beendet!", "Naechster Satz – Los geht's!");
+    sendNotif("Pause beendet!", "Naechster Satz – Los geht's!");
     showToast("Pause beendet! Weiter geht's!");
   });
 
-  useEffect(() => { saveData(data); }, [data]);
-  useEffect(() => { requestNotification(); }, []);
+  useEffect(() => { reqNotif(); }, []);
+
+  // Save locally always, Drive debounced
+  useEffect(() => {
+    lsSave(data);
+    if (!isLoggedIn) return;
+    clearTimeout(saveTimerRef.current);
+    setSyncStatus("syncing");
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await saveToDrive(data);
+        setSyncStatus("synced");
+      } catch {
+        setSyncStatus("error");
+      }
+    }, 1500);
+  }, [data, isLoggedIn]);
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2500); }
+
+  async function handleLogin() {
+    try {
+      setSyncStatus("syncing");
+      await signIn();
+      setIsLoggedIn(true);
+      showToast("Angemeldet! Lade Daten...");
+      const remote = await loadFromDrive();
+      if (remote && remote.logs) {
+        // Merge: prefer remote for older dates, local for today
+        const merged = { logs: { ...remote.logs } };
+        const todayPrefix = todayKey();
+        Object.entries(data.logs).forEach(([k, v]) => {
+          if (k.startsWith(todayPrefix)) merged.logs[k] = v;
+        });
+        setData(merged);
+        lsSave(merged);
+        showToast("Daten aus Google Drive geladen!");
+      } else {
+        showToast("Kein Verlauf in Drive gefunden – starte neu.");
+      }
+      setSyncStatus("synced");
+    } catch (e) {
+      setSyncStatus("error");
+      showToast("Anmeldung fehlgeschlagen.");
+    }
+  }
 
   function getLog(dayId, exId) {
     return data.logs[`${todayKey()}_${dayId}`]?.[exId] ?? {};
@@ -142,10 +274,10 @@ function App() {
     });
   }
 
-  function markSetDone(dayId, exId, setIdx, restDuration) {
+  function markSetDone(dayId, exId, setIdx, rest) {
     setSetValue(dayId, exId, setIdx, "done", true);
-    timer.start(restDuration);
-    showToast(`Pause: ${fmtTime(restDuration)}`);
+    timer.start(rest);
+    showToast(`Pause: ${fmtTime(rest)}`);
   }
 
   function histSetValue(sessionKey, exId, setIdx, field, value) {
@@ -191,12 +323,12 @@ function App() {
     return { done, total };
   }
 
-  if (view === "workout" && activeDay) return (
-    <WorkoutView day={activeDay} getLog={getLog} setSetValue={setSetValue}
-      markSetDone={markSetDone} getLastWeight={getLastWeight} timer={timer}
-      onBack={() => { setView("home"); timer.reset(); }} toast={toast} showToast={showToast} />
-  );
+  const sharedProps = { getLog, setSetValue, markSetDone, getLastWeight, timer, histSetValue, histDeleteSet };
 
+  if (view === "workout" && activeDay) return (
+    <WorkoutView day={activeDay} {...sharedProps}
+      onBack={() => { setView("home"); timer.reset(); }} toast={toast} />
+  );
   if (view === "history") return (
     <HistoryView data={data} onBack={() => setView("home")}
       histSetValue={histSetValue} histDeleteSet={histDeleteSet} />
@@ -205,17 +337,52 @@ function App() {
   return (
     <HomeView plan={PLAN} dayProgress={dayProgress}
       onStart={(day) => { setActiveDay(day); setView("workout"); }}
-      onHistory={() => setView("history")} toast={toast} />
+      onHistory={() => setView("history")}
+      toast={toast}
+      syncStatus={syncStatus}
+      isLoggedIn={isLoggedIn}
+      onLogin={handleLogin}
+    />
   );
 }
 
-// ── HOME ─────────────────────────────────────────────────────────────────────
-function HomeView({ plan, dayProgress, onStart, onHistory, toast }) {
+// ── SYNC BADGE ────────────────────────────────────────────────────────────────
+function SyncBadge({ status, isLoggedIn, onLogin }) {
+  if (!isLoggedIn) return (
+    <button style={S.loginBtn} onClick={onLogin}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 5 }}>
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/>
+        <path d="M15 9H9m0 0l3-3m-3 3l3 3"/>
+      </svg>
+      Drive-Sync
+    </button>
+  );
+  const map = {
+    syncing: { color: "#F59E0B", label: "Speichern..." },
+    synced:  { color: "#22c55e", label: "Gespeichert" },
+    error:   { color: "#ef4444", label: "Sync-Fehler" },
+    offline: { color: "#555",    label: "Offline" },
+  };
+  const s = map[status] || map.offline;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: s.color, fontWeight: 700 }}>
+      {status === "syncing"
+        ? <div style={{ width: 8, height: 8, border: `2px solid ${s.color}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        : <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+      }
+      {s.label}
+    </div>
+  );
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function HomeView({ plan, dayProgress, onStart, onHistory, toast, syncStatus, isLoggedIn, onLogin }) {
   return (
     <div style={S.app}>
       {toast && <Toast msg={toast} />}
       <header style={S.header}>
         <div style={S.logo}>FitTrack</div>
+        <SyncBadge status={syncStatus} isLoggedIn={isLoggedIn} onLogin={onLogin} />
         <button style={S.histBtn} onClick={onHistory}>Verlauf</button>
       </header>
       <div style={{ padding: "28px 20px 8px" }}>
@@ -227,8 +394,7 @@ function HomeView({ plan, dayProgress, onStart, onHistory, toast }) {
           const { done, total } = dayProgress(day);
           const pct = total ? Math.round((done / total) * 100) : 0;
           return (
-            <button key={day.id}
-              className="day-card"
+            <button key={day.id} className="day-card"
               style={{ ...S.dayCard, borderColor: pct > 0 ? day.color + "55" : "#1E1E2E" }}
               onClick={() => onStart(day)}>
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: day.color, borderRadius: "18px 18px 0 0" }} />
@@ -237,7 +403,7 @@ function HomeView({ plan, dayProgress, onStart, onHistory, toast }) {
               <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>{day.exercises.length} Übungen</div>
               {pct > 0 && <>
                 <div style={{ height: 3, background: "#1E1E2E", borderRadius: 2, marginTop: 10 }}>
-                  <div style={{ height: "100%", borderRadius: 2, background: day.color, width: `${pct}%`, transition: "width 0.5s" }} />
+                  <div style={{ height: "100%", borderRadius: 2, background: day.color, width: `${pct}%` }} />
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: day.color }}>{pct}% heute</div>
               </>}
@@ -284,7 +450,6 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
                 </div>
                 {allDone && <span style={{ fontSize: 22, color: "#22c55e" }}>✓</span>}
               </div>
-
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "30px 1fr 1fr 44px", gap: 8, fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: 0.5, padding: "0 4px" }}>
                   <span>Satz</span><span>Gewicht ({ex.unit})</span><span>Wdh.</span><span></span>
@@ -293,7 +458,7 @@ function WorkoutView({ day, getLog, setSetValue, markSetDone, getLastWeight, tim
                   const setLog = log[si] ?? {};
                   const done = setLog.done ?? false;
                   return (
-                    <div key={si} style={{ display: "grid", gridTemplateColumns: "30px 1fr 1fr 44px", gap: 8, alignItems: "center", padding: "4px", borderRadius: 8, background: done ? "rgba(255,255,255,0.04)" : "transparent" }}>
+                    <div key={si} style={{ display: "grid", gridTemplateColumns: "30px 1fr 1fr 44px", gap: 8, alignItems: "center", padding: 4, borderRadius: 8, background: done ? "rgba(255,255,255,0.04)" : "transparent" }}>
                       <span style={{ fontSize: 16, fontWeight: 900, textAlign: "center", color: day.color }}>{si + 1}</span>
                       <input type="number" style={S.input} placeholder="–" value={setLog.weight ?? ""}
                         onChange={e => setSetValue(day.id, ex.id, si, "weight", e.target.value)} />
@@ -332,11 +497,11 @@ function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
     .filter(Boolean)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  function toggleEdit(sessionKey, exId) {
-    const k = `${sessionKey}__${exId}`;
+  const toggleEdit = (sk, exId) => {
+    const k = `${sk}__${exId}`;
     setEditing(prev => ({ ...prev, [k]: !prev[k] }));
-  }
-  function isEdit(sessionKey, exId) { return !!editing[`${sessionKey}__${exId}`]; }
+  };
+  const isEdit = (sk, exId) => !!editing[`${sk}__${exId}`];
 
   return (
     <div style={S.app}>
@@ -357,13 +522,11 @@ function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
               </div>
               <div style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: s.day.color }}>{s.done}/{s.total} Sätze</div>
             </div>
-
             {s.day.exercises.map(ex => {
               const exLog = s.log[ex.id] ?? {};
               const allSets = Object.entries(exLog);
               if (!allSets.length) return null;
               const editMode = isEdit(s.key, ex.id);
-
               return (
                 <div key={ex.id} style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
@@ -373,7 +536,6 @@ function HistoryView({ data, onBack, histSetValue, histDeleteSet }) {
                       {editMode ? "Fertig" : "Bearbeiten"}
                     </button>
                   </div>
-
                   {!editMode ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {allSets.map(([si, v]) => (
@@ -421,13 +583,14 @@ function Toast({ msg }) {
 
 const S = {
   app: { minHeight: "100vh", background: "#0A0A0F", color: "#E8E8F0", fontFamily: "'Barlow', sans-serif", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: "#0D0D14", borderBottom: "1px solid #1E1E2E", position: "sticky", top: 0, zIndex: 100 },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "#0D0D14", borderBottom: "1px solid #1E1E2E", position: "sticky", top: 0, zIndex: 100, gap: 10 },
   logo: { fontSize: 20, fontWeight: 800, letterSpacing: 1, color: "#FF6B35" },
-  histBtn: { background: "transparent", border: "1px solid #333", color: "#aaa", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13 },
+  histBtn: { background: "transparent", border: "1px solid #333", color: "#aaa", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, flexShrink: 0 },
+  loginBtn: { display: "flex", alignItems: "center", background: "transparent", border: "1px solid #4285F4", color: "#4285F4", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 },
   backBtn: { background: "transparent", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16, padding: 0 },
   h1: { fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: 0.5 },
   dayGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "16px 20px" },
-  dayCard: { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 18, padding: "20px 16px", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, transition: "transform 0.15s, border-color 0.15s", position: "relative", overflow: "hidden" },
+  dayCard: { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 18, padding: "20px 16px", textAlign: "left", cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, transition: "transform 0.15s", position: "relative", overflow: "hidden" },
   scroll: { flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 14 },
   card: { background: "#12121C", border: "1px solid #1E1E2E", borderRadius: 16, padding: 16 },
   input: { background: "#0A0A0F", border: "1px solid #252535", borderRadius: 8, color: "#E8E8F0", fontSize: 16, fontWeight: 700, padding: "6px 8px", width: "100%", textAlign: "center", outline: "none", boxSizing: "border-box" },
